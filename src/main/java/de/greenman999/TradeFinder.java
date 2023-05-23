@@ -75,15 +75,26 @@ public class TradeFinder {
     public static void tick() {
         MinecraftClient mc = MinecraftClient.getInstance();
 
-        if(state == TradeState.IDLE) return;
+        if (state == TradeState.IDLE) return;
         switch (state) {
-            case CHECK -> MinecraftClient.getInstance().inGameHud.setOverlayMessage(Text.literal("checking trade --- attempt: " + tries).formatted(Formatting.GRAY), false);
-            case BREAK -> MinecraftClient.getInstance().inGameHud.setOverlayMessage(Text.literal("breaking lectern --- attempt: " + tries).formatted(Formatting.GRAY), false);
-            case PLACE -> MinecraftClient.getInstance().inGameHud.setOverlayMessage(Text.literal("placing lectern --- attempt: " + tries).formatted(Formatting.GRAY), false);
+            case CHECK -> MinecraftClient.getInstance().inGameHud.setOverlayMessage(Text
+                .literal("checking trade --- attempt: " + tries)
+                .formatted(Formatting.GRAY), false);
+            case BREAK -> MinecraftClient.getInstance().inGameHud.setOverlayMessage(Text
+                .literal("breaking lectern --- attempt: " + tries)
+                .formatted(Formatting.GRAY), false);
+            case PLACE -> MinecraftClient.getInstance().inGameHud.setOverlayMessage(Text
+                .literal("placing lectern --- attempt: " + tries)
+                .formatted(Formatting.GRAY), false);
         }
 
-        if((state == TradeState.CHECK || state == TradeState.WAITING_FOR_PACKET) && villager.getVillagerData().getProfession().equals(VillagerProfession.LIBRARIAN)) {
-            Vec3d villagerPosition = new Vec3d(villager.getX(), villager.getY() + (double) villager.getEyeHeight(EntityPose.STANDING), villager.getZ());
+        if ((state == TradeState.CHECK || state == TradeState.WAITING_FOR_PACKET) && villager
+            .getVillagerData()
+            .getProfession()
+            .equals(VillagerProfession.LIBRARIAN)) {
+            Vec3d villagerPosition =
+                new Vec3d(villager.getX(), villager.getY() + (double) villager.getEyeHeight(EntityPose.STANDING),
+                    villager.getZ());
 
             MinecraftClient.getInstance().player.lookAt(EntityAnchorArgumentType.EntityAnchor.EYES, villagerPosition);
             /*if(interactDelay > 0) {
@@ -92,59 +103,75 @@ public class TradeFinder {
             }
             interactDelay = 2;*/
 
-            ActionResult result = MinecraftClient.getInstance().interactionManager.interactEntity(MinecraftClient.getInstance().player, villager, Hand.MAIN_HAND);
-            if(result == ActionResult.SUCCESS) {
+            ActionResult result =
+                MinecraftClient.getInstance().interactionManager.interactEntity(MinecraftClient.getInstance().player,
+                    villager, Hand.MAIN_HAND);
+            if (result == ActionResult.SUCCESS) {
                 state = TradeState.WAITING_FOR_PACKET;
-            }else {
-                MinecraftClient.getInstance().inGameHud.getChatHud().addMessage(Text.literal("Failed to interact with villager. Try again.").styled(style -> style.withColor(TextColor.fromFormatting(Formatting.RED))));
+            } else {
+                MinecraftClient.getInstance().inGameHud.getChatHud().addMessage(Text
+                    .literal("Failed to interact with villager. Try again.")
+                    .styled(style -> style.withColor(TextColor.fromFormatting(Formatting.RED))));
                 stop();
             }
 
-        } else if(state == TradeState.BREAK) {
+        } else if (state == TradeState.BREAK) {
             BlockPos toPlace = lecternPos.down();
-            MinecraftClient.getInstance().player.lookAt(EntityAnchorArgumentType.EntityAnchor.EYES, new Vec3d(toPlace.getX() + 0.5, toPlace.getY() + 1.0, toPlace.getZ() + 0.5));
+            MinecraftClient.getInstance().player.lookAt(EntityAnchorArgumentType.EntityAnchor.EYES,
+                new Vec3d(toPlace.getX() + 0.5, toPlace.getY() + 1.0, toPlace.getZ() + 0.5));
             ClientPlayerEntity player = MinecraftClient.getInstance().player;
             PlayerInventory inventory = player.getInventory();
             ItemStack mainHand = inventory.getMainHandStack();
-            if(mainHand.getItem() instanceof AxeItem) {
+            if (mainHand.getItem() instanceof AxeItem) {
                 int remainingDurability = mainHand.getMaxDamage() - mainHand.getDamage();
-                if(remainingDurability <= 5 && LibrarianTradeFinder.getConfig().preventAxeBreaking) {
+                if (remainingDurability <= 5 && LibrarianTradeFinder.getConfig().preventAxeBreaking) {
                     stop();
-                    MinecraftClient.getInstance().inGameHud.getChatHud().addMessage(Text.literal("The searching process was stopped because your axe is about to break.").formatted(Formatting.RED));
+                    MinecraftClient.getInstance().inGameHud.getChatHud().addMessage(Text
+                        .literal("The searching process was stopped because your axe is about to break.")
+                        .formatted(Formatting.RED));
                     return;
                 }
             }
-            if(MinecraftClient.getInstance().world.getBlockState(lecternPos).getBlock() instanceof LecternBlock) {
+            if (MinecraftClient.getInstance().world.getBlockState(lecternPos).getBlock() instanceof LecternBlock) {
                 MinecraftClient.getInstance().player.swingHand(Hand.MAIN_HAND, true);
                 MinecraftClient.getInstance().interactionManager.updateBlockBreakingProgress(lecternPos, Direction.UP);
-                MinecraftClient.getInstance().player.networkHandler
-                        .sendPacket(new HandSwingC2SPacket(Hand.MAIN_HAND));
-            }else {
+                MinecraftClient.getInstance().player.networkHandler.sendPacket(new HandSwingC2SPacket(Hand.MAIN_HAND));
+            } else {
                 state = TradeState.PLACE;
-                if(LibrarianTradeFinder.getConfig().tpToVillager) {
+                if (LibrarianTradeFinder.getConfig().tpToVillager) {
                     prevPos = mc.player.getPos();
-                    mc.getNetworkHandler().sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(villager.getX(), villager.getY(), villager.getZ(), true));
+                    mc
+                        .getNetworkHandler()
+                        .sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(villager.getX(), villager.getY(),
+                            villager.getZ(), true));
                 }
             }
 
         } else if (state == TradeState.PLACE) {
-            if(LibrarianTradeFinder.getConfig().tpToVillager) {
-                mc.getNetworkHandler().sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(prevPos.x, prevPos.y, prevPos.z, true));
+            if (LibrarianTradeFinder.getConfig().tpToVillager) {
+                mc
+                    .getNetworkHandler()
+                    .sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(prevPos.x, prevPos.y, prevPos.z, true));
             }
 
             BlockPos toPlace = lecternPos.down();
-            MinecraftClient.getInstance().player.lookAt(EntityAnchorArgumentType.EntityAnchor.EYES, new Vec3d(toPlace.getX() + 0.5, toPlace.getY() + 1.0, toPlace.getZ() + 0.5));
+            MinecraftClient.getInstance().player.lookAt(EntityAnchorArgumentType.EntityAnchor.EYES,
+                new Vec3d(toPlace.getX() + 0.5, toPlace.getY() + 1.0, toPlace.getZ() + 0.5));
 
-            if(!MinecraftClient.getInstance().player.getOffHandStack().getItem().equals(Items.LECTERN)) {
+            if (!MinecraftClient.getInstance().player.getOffHandStack().getItem().equals(Items.LECTERN)) {
                 if (mc.player.playerScreenHandler == mc.player.currentScreenHandler) {
                     for (int i = 9; i < 45; i++) {
                         if (mc.player.getInventory().getStack(i >= 36 ? i - 36 : i).getItem() == Items.LECTERN) {
                             boolean itemInOffhand = !mc.player.getOffHandStack().isEmpty();
-                            mc.interactionManager.clickSlot(mc.player.currentScreenHandler.syncId, i, 0, SlotActionType.PICKUP, mc.player);
-                            mc.interactionManager.clickSlot(mc.player.currentScreenHandler.syncId, 45, 0, SlotActionType.PICKUP, mc.player);
+                            mc.interactionManager.clickSlot(mc.player.currentScreenHandler.syncId, i, 0,
+                                SlotActionType.PICKUP, mc.player);
+                            mc.interactionManager.clickSlot(mc.player.currentScreenHandler.syncId, 45, 0,
+                                SlotActionType.PICKUP, mc.player);
 
-                            if (itemInOffhand)
-                                mc.interactionManager.clickSlot(mc.player.currentScreenHandler.syncId, i, 0, SlotActionType.PICKUP, mc.player);
+                            if (itemInOffhand) {
+                                mc.interactionManager.clickSlot(mc.player.currentScreenHandler.syncId, i, 0,
+                                    SlotActionType.PICKUP, mc.player);
+                            }
 
                             break;
                         }
@@ -169,9 +196,11 @@ public class TradeFinder {
                 return;
             }
             placeDelay = 3;*/
-            BlockHitResult hit = new BlockHitResult(new Vec3d(lecternPos.getX(), lecternPos.getY(),
-                    lecternPos.getZ()), Direction.UP, lecternPos.down(), false);
-            MinecraftClient.getInstance().interactionManager.interactBlock(MinecraftClient.getInstance().player, Hand.OFF_HAND, hit);
+            BlockHitResult hit =
+                new BlockHitResult(new Vec3d(lecternPos.getX(), lecternPos.getY(), lecternPos.getZ()), Direction.UP,
+                    lecternPos.down(), false);
+            MinecraftClient.getInstance().interactionManager.interactBlock(MinecraftClient.getInstance().player,
+                Hand.OFF_HAND, hit);
 
             state = TradeState.CHECK;
         }
